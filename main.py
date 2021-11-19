@@ -7,6 +7,17 @@ import embedded
 import pickle
 import paho.mqtt.client as paho
 
+# R Pi
+import Rpi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+#stop_button_pin = 
+init_button_pin = 24
+exit_button_pin = 25
+#relay_pin = 
+#GPIO.setup(stop_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(init_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(exit_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
 #Call back function for mqtt client
 def on_publish(client,userdata,mid):   #create function for callback
    print("data published mid=",mid, "\n")
@@ -215,11 +226,11 @@ while True:
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    elif cv2.waitKey(1) == ord('i') and not capturing and not occupied:
+    elif GPIO.input(init_button_pin)==0 and not capturing and not occupied:
         capturing = True
         starttime=time.time()
         print('Performing face recognition...')
-    elif cv2.waitKey(1) == ord('o') and occupied:
+    elif GPIO.input(exit_button_pin)==0 and occupied:
         exiting = True
         print('{} exiting...'.format(person_in))
 vid.release()
