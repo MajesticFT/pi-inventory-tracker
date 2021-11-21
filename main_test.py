@@ -11,7 +11,7 @@ import paho.mqtt.client as paho
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-#stop_button_pin = 
+#stop_button_pin =
 init_button_pin = 24
 exit_button_pin = 25
 relay_pin = 18
@@ -25,7 +25,7 @@ def on_publish(client,userdata,mid):   #create function for callback
    print("data published mid=",mid, "\n")
    pass
 def on_disconnect(client, userdata, rc):
-   print("client disconnected ok") 
+   print("client disconnected ok")
 
 #Initiate mqtt client connection to server
 ITEMS_TOPIC = "ISE/mecha/items"
@@ -33,7 +33,7 @@ USER_TOPIC = "ISE/mecha/user"
 broker="test.mosquitto.org"
 port= 8080
 print("connecting to broker ",broker,"on port ",port)
-client= paho.Client("client-socks",transport='websockets') 
+client= paho.Client("client-socks",transport='websockets')
 client.on_publish = on_publish
 client.on_disconnect = on_disconnect
 client.connect(broker,port)           #establish connection
@@ -67,7 +67,7 @@ NMS_THRESHOLD =0.3
 labelsPath = os.path.join('yolov4-tiny','obj.names')
 LABELS = open(labelsPath).read().strip().split("\n")
 
-#Set series for counting objects (get only same object with at least 5 frames)
+# #Set series for counting objects (get only same object with at least 5 frames)
 last_count = pd.Series(np.zeros(len(LABELS)))
 last_count.index = LABELS
 now_count = pd.Series(np.zeros(len(LABELS)))
@@ -79,42 +79,42 @@ CONSECUTIVE_FRAME = 5
 count = 0
 
 
-#Initialize a list of colors to represent each class
-np.random.seed(42)
-COLORS = np.random.randint(0, 255, size=(len(LABELS),3), dtype='uint8')
+# #Initialize a list of colors to represent each class
+# np.random.seed(42)
+# COLORS = np.random.randint(0, 255, size=(len(LABELS),3), dtype='uint8')
 
-#Derive the paths to the YOLO weights and model config
-weightsPath = os.path.join('yolov4-tiny','custom-yolov4-tiny-detector_best.weights')
-configPath = os.path.join('yolov4-tiny','custom-yolov4-tiny-detector.cfg')
+# #Derive the paths to the YOLO weights and model config
+# weightsPath = os.path.join('yolov4-tiny','custom-yolov4-tiny-detector_best.weights')
+# configPath = os.path.join('yolov4-tiny','custom-yolov4-tiny-detector.cfg')
 
-#Initialize the DarkNet
-net = cv2.dnn.readNetFromDarknet(configPath,weightsPath)
-ln = net.getLayerNames()
-ln = [ln[i - 1] for i in net.getUnconnectedOutLayers()]
-print(ln)
+# #Initialize the DarkNet
+# net = cv2.dnn.readNetFromDarknet(configPath,weightsPath)
+# ln = net.getLayerNames()
+# ln = [ln[i - 1] for i in net.getUnconnectedOutLayers()]
+# print(ln)
 
 #Read from webcam for object detection
-vid = cv2.VideoCapture(0)
+#vid = cv2.VideoCapture(0)
 
 #Read from another webcam for face recognition
-face_vid = cv2.VideoCapture(1)
+face_vid = cv2.VideoCapture(0)
 
 
 while True:
 
-    ret, image = vid.read()
+    #ret, image = vid.read()
     face_ret, face_image = face_vid.read()
-    if not (ret and face_ret):
+    if not (face_ret):
         break
-    
-    (H, W) = image.shape[:2]
 
-    #Preprocess image
-    blob = cv2.dnn.blobFromImage(image, 1/255.0, (416,416), swapRB=True, crop=False)
-    net.setInput(blob)
-    start = time.time()
-    layerOutputs = net.forward(ln)
-    end = time.time()
+    # (H, W) = image.shape[:2]
+
+    # #Preprocess image
+    # blob = cv2.dnn.blobFromImage(image, 1/255.0, (416,416), swapRB=True, crop=False)
+    # net.setInput(blob)
+    # start = time.time()
+    # layerOutputs = net.forward(ln)
+    # end = time.time()
 
     #Show timing information on YOLO
     # print("YOLO took {:.6f} seconds".format(end-start))
@@ -123,49 +123,49 @@ while True:
     confidences = []
     classIDs = []
 
-    for output in layerOutputs:
-        for detection in output:
-            scores = detection[5:]
-            classID = np.argmax(scores)
-            confidence = scores[classID]
+    # for output in layerOutputs:
+    #     for detection in output:
+    #         scores = detection[5:]
+    #         classID = np.argmax(scores)
+    #         confidence = scores[classID]
 
-            if confidence > CONFIDENCE:
+    #         if confidence > CONFIDENCE:
 
-                box = detection[0:4] * np.array([W, H, W, H])
-                (centerX, centerY, width, height) = box.astype('int')
+    #             box = detection[0:4] * np.array([W, H, W, H])
+    #             (centerX, centerY, width, height) = box.astype('int')
 
-                x = int(centerX-(width/2))
-                y = int(centerY - (height/2))
+    #             x = int(centerX-(width/2))
+    #             y = int(centerY - (height/2))
 
-                boxes.append([x, y, int(width), int(height)])
-                confidences.append(float(confidence))
-                classIDs.append(classID)
-    #Applying non-maxima suppression
-    idxs = cv2.dnn.NMSBoxes(boxes, confidences, CONFIDENCE, NMS_THRESHOLD)
-    now_count = pd.Series(np.zeros(len(LABELS)))
-    now_count.index = LABELS
-    if len(idxs) > 0:
-        for i in idxs.flatten():
+    #             boxes.append([x, y, int(width), int(height)])
+    #             confidences.append(float(confidence))
+    #             classIDs.append(classID)
+    # #Applying non-maxima suppression
+    # idxs = cv2.dnn.NMSBoxes(boxes, confidences, CONFIDENCE, NMS_THRESHOLD)
+    # now_count = pd.Series(np.zeros(len(LABELS)))
+    # now_count.index = LABELS
+    # if len(idxs) > 0:
+    #     for i in idxs.flatten():
 
-            (x,y) = (boxes[i][0], boxes[i][1])
-            (w,h) = (boxes[i][2], boxes[i][3])
+    #         (x,y) = (boxes[i][0], boxes[i][1])
+    #         (w,h) = (boxes[i][2], boxes[i][3])
 
-            color = [int(c) for c in COLORS[classIDs[i]]]
-            cv2.rectangle(image, (x, y), (x+w, y+h), color, 2)
-            text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
-            cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
-            now_count.loc[LABELS[classIDs[i]]] += 1
-    #Check for same object in consecutive FRAMES
-    if not first:
-        if now_count.equals(last_count):
-            count += 1
-        else:
-            count = 0
-        if count >= CONSECUTIVE_FRAME:
-            true_count = now_count.copy()
-    else:
-        first = False
-    last_count = now_count.copy()  
+    #         color = [int(c) for c in COLORS[classIDs[i]]]
+    #         cv2.rectangle(image, (x, y), (x+w, y+h), color, 2)
+    #         text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
+    #         cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX,0.5, color, 2)
+    #         now_count.loc[LABELS[classIDs[i]]] += 1
+    # #Check for same object in consecutive FRAMES
+    # if not first:
+    #     if now_count.equals(last_count):
+    #         count += 1
+    #     else:
+    #         count = 0
+    #     if count >= CONSECUTIVE_FRAME:
+    #         true_count = now_count.copy()
+    # else:
+    #     first = False
+    # last_count = now_count.copy()
     # print(true_count[true_count>0])
 
     #If capturing is True, capture 5 selfies within 2 seconds, then fed it in compare_face
@@ -192,7 +192,7 @@ while True:
                 person_in = result
                 print(before_count[before_count>0])
             capturing = False
-    
+
     elif capturing and count<5:
         print('Waiting for camera to settle...')
         starttime = time.time()
@@ -220,11 +220,11 @@ while True:
         time.sleep(0.5)
     elif exiting and count<5:
         print('Waiting for camera to settle...')
-    
-        
 
-        
-    cv2.imshow('Object',image)
+
+
+
+   # cv2.imshow('Object',image)
     cv2.imshow('Face',face_image)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -238,6 +238,6 @@ while True:
         time.sleep(10)
         GPIO.output(relay_pin, 0)
         print('{} exiting...'.format(person_in))
-vid.release()
+#vid.release()
 face_vid.release()
 cv2.destroyAllWindows()
