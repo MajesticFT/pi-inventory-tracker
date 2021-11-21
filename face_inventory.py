@@ -1,30 +1,108 @@
 import numpy as np
-import embedded
-import pandas as pd
+import time
+import cv2
 import os
+import pandas as pd
+import embedded
 import pickle
-def compare_face(embedded_id,embedded_selfies,threshold=0.85):
-    if len(embedded_id) == 0 or len(embedded_selfies) == 0:
-        euclidean_distance2 = np.empty((0))
-    matches = 0 
-    for embedded_img in embedded_selfies: #(1,128)
-        euclidean_distance2 = np.linalg.norm(embedded_img-embedded_id)
-        # euclidean_distance1 = np.sqrt(np.mean((embedded_img[0]-embedded_id[0])**2))
-        print(euclidean_distance2)
-        if euclidean_distance2 <= threshold:
-            matches +=1
-    return matches > len(embedded_selfies)/2
+import paho.mqtt.client as paho
 
-def main():
-    embedded_face = embedded.selfie()
-    original_face = []
-    names = pd.read_csv('names.csv')
-    for name in names['Name'].tolist():
-        print(name)
-        with open(os.path.join(name,'encoded'),'rb') as f:
-            original_face = pickle.load(f)
-        print(compare_face(original_face,embedded_face))
-    print(original_face)
-    pass
-if __name__ == '__main__':
-    main()
+# R Pi
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+#stop_button_pin =
+init_button_pin = 24
+exit_button_pin = 25
+relay_pin = 18
+#GPIO.setup(stop_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(relay_pin, GPIO.OUT)
+GPIO.setup(init_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(exit_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+
+
+#Variable for face_recognition
+REGISTER_LISTS = pd.read_csv('names.csv')['Name'].tolist()
+starttime = 0
+occupied = False
+selfie_frames = []
+embedded_selfies = []
+NUM_SELFIES = 5
+SELFIE_DURATION = 2.0
+person_in = ""
+capturing = False
+exiting = False
+
+#Checking for object count before and after the inventory is occupied
+
+#Load face encoded features from the list of registered names
+face_features = {}
+for name in REGISTER_LISTS:
+    print("Loading {}'s features".format(name))
+    with open(os.path.join(name,"encoded"),'rb') as f:
+        face_features[name] = pickle.load(f)
+
+#Read from another webcam for face recognition
+face_vid = cv2.VideoCapture(0)
+
+
+while True:
+
+    face_ret, face_image = face_vid.read()
+    if not  face_ret:
+        break
+
+    #Show timing information on YOLO
+    # print("YOLO took {:.6f} seconds".format(end-start))
+
+    #If capturing is True, capture 5 selfies within 2 seconds, then fed it in compare_face
+    if capturing:
+        now = time.time()
+        delta = now-starttime
+        if delta>=SELFIE_DURATION/NUM_SELFIES:
+            print('Capturing')
+            selfie_frames.append(face_image)
+            startime = time.time()
+        if len(selfie_frames) == NUM_SELFIES:
+            capturing=False
+            embedded_selfies = [embedded.get_embedding(selfie_frame) for selfie_frame in selfie_frames]
+            result = embedded.compare_face(face_features,embedded_selfies)
+            if result == "":
+                print("Unrecognized face")
+            else:
+                #-----Insert magnetic lock code here!------#
+                print("Welcome! {}".format(result))
+                GPIO.output(relay_pin, 1)
+                #------------------------------------------#
+                occupied = True
+                person_in = result
+            capturing = False
+
+    #Clean up if the person exits
+    if exiting:
+        
+        # print(after_count.loc['clock'])
+        # print(before_count.loc['clock'])
+        person_in = ""
+        exiting = False
+        occupied = False
+        time.sleep(0.5)
+    
+        
+
+    cv2.imshow('Face',face_image)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    elif GPIO.input(init_button_pin)==0 and not capturing and not occupied:
+        capturing = True
+        starttime=time.time()
+        print('Performing face recognition...')
+    elif GPIO.input(exit_button_pin)==0 and occupied:
+        exiting = True
+        time.sleep(10)
+        GPIO.output(relay_pin, 0)
+        print('{} exiting...'.format(person_in))
+face_vid.release()
+cv2.destroyAllWindows()
