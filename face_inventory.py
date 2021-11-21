@@ -38,7 +38,9 @@ exiting = False
 
 #Load face encoded features from the list of registered names
 face_features = {}
+
 for name in REGISTER_LISTS:
+    print(name)
     print("Loading {}'s features".format(name))
     with open(os.path.join(name,"encoded"),'rb') as f:
         face_features[name] = pickle.load(f)
@@ -74,6 +76,8 @@ while True:
                 #-----Insert magnetic lock code here!------#
                 print("Welcome! {}".format(result))
                 GPIO.output(relay_pin, 1)
+                time.sleep(5)
+                GPIO.output(relay_pin, 0)
                 #------------------------------------------#
                 occupied = True
                 person_in = result
@@ -101,8 +105,8 @@ while True:
         print('Performing face recognition...')
     elif GPIO.input(exit_button_pin)==0 and occupied:
         exiting = True
-        time.sleep(10)
-        GPIO.output(relay_pin, 0)
         print('{} exiting...'.format(person_in))
+        time.sleep(5)
+        GPIO.output(relay_pin, 0)
 face_vid.release()
 cv2.destroyAllWindows()
