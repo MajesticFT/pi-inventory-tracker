@@ -75,9 +75,10 @@ while True:
             else:
                 #-----Insert magnetic lock code here!------#
                 print("Welcome! {}".format(result))
-                GPIO.output(relay_pin, 1)
-                time.sleep(5)
-                GPIO.output(relay_pin, 0)
+                end_time= time.time()
+                print(end_time-start_time)
+                if(end_time-start_time>10):
+                    GPIO.output(relay_pin, 0)
                 #------------------------------------------#
                 occupied = True
                 person_in = result
@@ -101,7 +102,8 @@ while True:
         break
     elif GPIO.input(init_button_pin)==0 and not capturing and not occupied:
         capturing = True
-        starttime=time.time()
+        start_time=time.time()
+        GPIO.output(relay_pin, 1)
         print('Performing face recognition...')
     elif GPIO.input(exit_button_pin)==0 and occupied:
         exiting = True

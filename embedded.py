@@ -4,10 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
-
-#RPi
+# Rpi
 import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 init_button_pin = 24
 exit_button_pin = 25
 GPIO.setup(init_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -80,7 +80,7 @@ def selfie():
     embedded_selfie = []
     frames = []
     
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     if cap.isOpened() == False:
         print("Can't connect to camera")
         return None
@@ -156,15 +156,22 @@ def items_message(items):
     items_str = items_str.split(',')
     items_str = ''.join(items_str)
     items_str = items_str.split()
+    if 'Juice:' in items_str:
+        items_str.remove('Juice:')
     message = []
-    for i in range(len(items_str)):
+    for i in range(len(items_str)-1):
+        if items_str[i] == 'Orange':
+            items_str[i] = 'Orange_Juice:'
+        items_str[i] = items_str[i].replace(items_str[i][0],items_str[i][0].upper())
         if i%2==0:
             message.append(''.join([items_str[i],items_str[i+1]]))
+    print(message)
+            
     message = ' '.join(message)
     return message
 def user_message(user, adds, diffs):
-    adds = items_message(adds)
-    diffs = items_message(diffs)
+    adds = ','.join(items_message(adds).split(' '))
+    diffs =','.join(items_message(diffs).split(' '))
     message = user+' '+adds+' '+diffs
     return message
     
